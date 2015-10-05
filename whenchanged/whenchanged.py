@@ -13,6 +13,7 @@ Use %%f to pass the filename to the command.
 Copyright (c) 2011, Johannes H. Jensen.
 License: BSD, see LICENSE for more details.
 """
+
 from __future__ import print_function
 
 # Standard library
@@ -43,14 +44,34 @@ class WhenChanged(pyinotify.ProcessEvent):
         self.run_once = run_once
         self.run_at_start = run_at_start
         self.last_run = 0
+        self.AWS_S3_BUCKET = "s3.vauxoo.com"
+        self.AWS_S3_PATH = "screenshots/"
+        self.AWS_S3_PERMISSIONS = "public-read"
+        self.AWS_REGION = "us-east-1"
+        self.SCREENSHOT_PATH = "/mnt/datos/screenshots/"
+        self.SCREENSHOT_URL = "http://s3.vauxoo.com/screenshots/%s"
 
-    def run_command(self, thefile):
+    def run_command(self, the_file):
+        """Wiring The Command but this should be generic.
+        """
+
         if self.run_once:
-            if os.path.exists(thefile) and os.path.getmtime(thefile) < self.last_run:
+            if os.path.exists(the_file) and os.path.getmtime(the_file) < self.last_run:
                 return
         new_command = []
         for item in self.command:
-            new_command.append(item.replace('%f', thefile))
+            new_command.append(item.replace('%f', the_file))
+
+        new_command.append('aws')
+        new_command.append('s3')
+        new_command.append('cp')
+        new_command.append('--region')
+        new_command.append(self.AWS_REGION)
+        new_command.append('--acl')
+        new_command.append(self.AWS_S3_PERMISSIONS)
+        new_command.append(the_file)
+        new_command.append('s3://{AWS_S3_BUCKET}/{AWS_S3_PATH}'.format(AWS_S3_BUCKET=self.AWS_S3_BUCKET,
+                                                                AWS_S3_PATH=self.AWS_S3_PATH))
         subprocess.call(new_command, shell=(len(new_command) == 1))
         self.last_run = time.time()
 
